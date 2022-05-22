@@ -1,0 +1,27 @@
+{
+  "name": "search-data-transcoder",
+  "version": "1.0.0",
+  "description": "Search Data Transcoder takes auslan-find-sign search-data and transcodes the videos in to multiple formats, for presentation in search results",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "auslan-find-sign",
+    "search-data"
+  ],
+  "author": "Phoenix Fox",
+  "license": "Unlicense",
+  "dependencies": {
+    "ffmpeg-static": "^5.0.0",
+    "handbrake-js": "^6.0.0",
+    "nanoid": "^3.3.4",
+    "node-fetch": "^3.2.4",
+    "simple-thumbnail": "^1.6.5",
+    "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.10"
+  }
+}
