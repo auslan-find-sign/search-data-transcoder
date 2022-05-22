@@ -79,16 +79,7 @@ for (const id in searchData) {
   const entry = searchData[id]
   console.log(`working on ${id}: ${entry.title}`)
 
-  const outputEntry = outputData[id] = {
-    title: entry.title,
-    words: entry.words,
-    link: entry.link,
-    nav: entry.nav,
-    body: entry.body,
-    media: [],
-    provider: entry.provider,
-    author: entry.author
-  }
+  const outputEntry = outputData[id] = { ...entry, media: [] }
 
   for (const [mediaIdx, mediaEntry] of entry.media.map((entry, idx) => [idx, entry])) {
     const { method, url, clipping } = mediaEntry
