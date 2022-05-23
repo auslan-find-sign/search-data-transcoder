@@ -219,7 +219,7 @@ for (const id in searchData) {
 
     if (args.writeContinuously) {
       console.log(`writing encoded search data to ${outputURL}`)
-      await write(outputURL, JSON.stringify(outputData))
+      await write(outputURL, JSON.stringify({ ...prevEncode, ...outputData }))
     }
   }
 }
