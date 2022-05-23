@@ -82,6 +82,7 @@ const encodeFormats = args.formats.split(',').map(x => {
 
 for (const id in searchData) {
   const entry = searchData[id]
+  let didEncodeWork = false
   console.log(`working on ${id}: ${entry.title}`)
 
   const outputEntry = outputData[id] = { ...entry, media: [] }
@@ -179,6 +180,8 @@ for (const id in searchData) {
         })
       })
 
+      didEncodeWork = true
+
       const mediaOutputURL = new URL(outputURL.toString())
       const videoEncodeFilename = `${idToFilename(id)}-${mediaIdx}-${codec}-${actualWidth}x${actualHeight}.${container}`
       mediaOutputURL.pathname = `${mediaOutputURL.pathname.replace(/\.json$/, '')}-media/${videoEncodeFilename}`
@@ -215,9 +218,10 @@ for (const id in searchData) {
       await fs.promises.rm(thumbnailTempPath)
       outputMedia.thumbnail = `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${thumbnailFilename}`
       console.log('thumbnail done')
+      didEncodeWork = true
     }
 
-    if (args.writeContinuously) {
+    if (args.writeContinuously && didEncodeWork) {
       console.log(`writing encoded search data to ${outputURL}`)
       await write(outputURL, JSON.stringify({ ...prevEncode, ...outputData }))
     }
