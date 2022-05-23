@@ -11,6 +11,11 @@ import { tmpdir } from 'os'
 import ffmpeg from 'ffmpeg-static'
 import genThumbnail from 'simple-thumbnail'
 
+const codecPresets = {
+  vp9: 'slow', // very slow is so so slow in vp9
+  x264: 'veryslow'
+}
+
 // make strings filename safe
 function idToFilename (id) {
   return id.replace(/[^-a-zA-Z0-9.]/gmi, (match) => {
@@ -140,7 +145,7 @@ for (const id in searchData) {
         hqdn3d: 'strong',
         'keep-display-aspect': true,
         audio: 'none',
-        'encoder-preset': 'veryslow',
+        'encoder-preset': codecPresets[codec] || 'veryslow',
         optimize: true,
         'align-av': true,
         '2': true, // enable 2-pass encoding
