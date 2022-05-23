@@ -46,7 +46,7 @@ const args = yargs(hideBin(process.argv))
     alias: 'f',
     type: 'string',
     description: 'Formats to transcode in to, comma seperated list of [container]:[codec]:[quality]@[horizontal]x[vertical]',
-    default: 'mp4:x264:22.0@512x288,webm:vp9:63.0@1024x576'
+    default: 'mp4:x264:22.0@512x288,webm:vp9:32.0@1024x576'
   })
   .option('write-continuously', {
     type: 'boolean',
