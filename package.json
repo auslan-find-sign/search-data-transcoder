@@ -14,9 +14,9 @@
   "author": "Phoenix Fox",
   "license": "Unlicense",
   "dependencies": {
+    "@ffprobe-installer/ffprobe": "^1.4.1",
     "ffmpeg-static": "^5.0.0",
-    "ffprobe": "^1.1.2",
-    "ffprobe-static": "^3.0.0",
+    "getmeta-ffprobe": "^0.0.4",
     "handbrake-js": "^6.0.0",
     "nanoid": "^3.3.4",
     "node-fetch": "^3.2.4",

@@ -10,8 +10,10 @@ import { nanoid } from 'nanoid'
 import { tmpdir } from 'os'
 import ffmpeg from 'ffmpeg-static'
 import genThumbnail from 'simple-thumbnail'
-import ffprobe from 'ffprobe'
-import ffprobeStatic from 'ffprobe-static'
+import ffprobe from 'getmeta-ffprobe'
+// import ffprobe from 'ffprobe'
+
+// import ffprobeStatic from 'ffprobe-static'
 // const ffprobeStatic = { path: '/opt/homebrew/bin/ffprobe' }
 
 const codecPresets = {
@@ -116,17 +118,18 @@ for (const id in searchData) {
         if (prevEncode) {
           outputMedia.timestamp = Math.min(outputMedia.timestamp, prevMedia.timestamp)
           // augment the ffprobed info, temporary for patching, pull later
-          if (!prevEncode.byteSize || !prevEncode.duration) {
+          // if (!prevEncode.byteSize || !prevEncode.duration) {
             const encodeURL = new URL(prevEncode.url, outputURL)
-            const encodeBytes = await read(encodeURL)
-            fs.writeFileSync('./encodeData', encodeBytes)
-            const mediaStats = await ffprobe('./encodeData', ffprobeStatic)
-            const videoStream = mediaStats.streams.find(x => x.codec_type === 'video')
-            prevEncode.byteSize = (await read(encodeURL)).length
-            prevEncode.codec = videoStream.codec_tag_string
-            const timebase = Number(videoStream.time_base.split('/')[0]) / Number(videoStream.time_base.split('/')[1])
-            prevEncode.duration = videoStream.duration_ts * timebase
-          }
+            const encodePath = encodeURL.protocol === 'file:' ? fileURLToPath(encodeURL) : encodeURL.toString()
+            const [width, height, codecName] = await ffprobe(encodePath, 'stream', 'v', 'width,height,codec_name')
+            const [duration, byteSize] = await ffprobe(encodePath, 'format', 'v', 'duration,size')
+            prevEncode.width = Number(width)
+            prevEncode.height = Number(height)
+            prevEncode.codec = codecName
+            prevEncode.duration = Number(duration)
+            // prevEncode.byteSize = (await read(encodeURL)).length
+            prevEncode.byteSize = Number(byteSize)
+          // }
           outputMedia.encodes.push(prevEncode)
           continue
         }
