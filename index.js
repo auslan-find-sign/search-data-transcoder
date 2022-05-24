@@ -4,17 +4,13 @@ import { hideBin } from 'yargs/helpers'
 import { read, write } from './io.js'
 import hbjs from 'handbrake-js'
 import { cwd } from 'process'
-import { fileURLToPath, pathToFileURL } from 'url'
-import { dirname, join } from 'path'
+import { pathToFileURL } from 'url'
+import { join } from 'path'
 import { nanoid } from 'nanoid'
 import { tmpdir } from 'os'
 import ffmpeg from 'ffmpeg-static'
 import genThumbnail from 'simple-thumbnail'
 import ffprobe from 'getmeta-ffprobe'
-// import ffprobe from 'ffprobe'
-
-// import ffprobeStatic from 'ffprobe-static'
-// const ffprobeStatic = { path: '/opt/homebrew/bin/ffprobe' }
 
 const codecPresets = {
   vp9: 'slow', // very slow is so so slow in vp9
@@ -117,19 +113,6 @@ for (const id in searchData) {
         })
         if (prevEncode) {
           outputMedia.timestamp = Math.min(outputMedia.timestamp, prevMedia.timestamp)
-          // augment the ffprobed info, temporary for patching, pull later
-          // if (!prevEncode.byteSize || !prevEncode.duration) {
-            const encodeURL = new URL(prevEncode.url, outputURL)
-            const encodePath = encodeURL.protocol === 'file:' ? fileURLToPath(encodeURL) : encodeURL.toString()
-            const [width, height, codecName] = await ffprobe(encodePath, 'stream', 'v', 'width,height,codec_name')
-            const [duration, byteSize] = await ffprobe(encodePath, 'format', 'v', 'duration,size')
-            prevEncode.width = Number(width)
-            prevEncode.height = Number(height)
-            prevEncode.codec = codecName
-            prevEncode.duration = Number(duration)
-            // prevEncode.byteSize = (await read(encodeURL)).length
-            prevEncode.byteSize = Number(byteSize)
-          // }
           outputMedia.encodes.push(prevEncode)
           continue
         }
@@ -156,8 +139,6 @@ for (const id in searchData) {
         output: outputTempFile,
         format: container,
         encoder: codec,
-        // 'encoder-profile': 'high',
-        // 'encoder-level': '4.1',
         maxWidth: width,
         maxHeight: height,
         quality: quality,
@@ -204,9 +185,8 @@ for (const id in searchData) {
       const videoEncodeFilename = `${idToFilename(id)}-${mediaIdx}-${codec}-${actualWidth}x${actualHeight}.${container}`
       mediaOutputURL.pathname = `${mediaOutputURL.pathname.replace(/\.json$/, '')}-media/${videoEncodeFilename}`
 
-      const mediaStats = await ffprobe(outputTempFile, ffprobeStatic)
-      const videoStream = mediaStats.streams.find(x => x.codec_type === 'video')
-      const timebase = Number(videoStream.time_base.split('/')[0]) / Number(videoStream.time_base.split('/')[1])
+      const [pWidth, pHeight, pCodecName] = await ffprobe(outputTempFile, 'stream', 'v', 'width,height,codec_name')
+      const [pDuration, pByteSize] = await ffprobe(outputTempFile, 'format', 'v', 'duration,size')
 
       const encodedData = await read(pathToFileURL(outputTempFile))
       await write(mediaOutputURL, encodedData)
@@ -215,11 +195,11 @@ for (const id in searchData) {
       outputMedia.encodes.push({
         type: `video/${container}`,
         container,
-        width: videoStream.width,
-        height: videoStream.height,
-        codec: videoStream.codec_tag_string,
-        duration: videoStream.duration_ts * timebase,
-        byteSize: encodedData.length,
+        width: Number(pWidth),
+        height: Number(pHeight),
+        codec: pCodecName,
+        duration: Number(pDuration),
+        byteSize: Number(pByteSize),
         url: `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${videoEncodeFilename}`,
         version: encodeVersion,
       })
