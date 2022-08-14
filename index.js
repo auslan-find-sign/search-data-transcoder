@@ -187,7 +187,7 @@ for (const id in searchData) {
         didEncodeWork = true
       } catch (err) {
         console.log('Video encode failed:', err)
-        didEncodeWork = false
+        outputEntry.published = false
       }
 
       if (didEncodeWork) {
@@ -218,10 +218,6 @@ for (const id in searchData) {
       }
     }
 
-    if (!didEncodeWork) {
-      outputEntry.published = false
-    }
-
     outputEntry.media.push(outputMedia)
     console.log('entry complete')
 
@@ -244,6 +240,7 @@ for (const id in searchData) {
         console.log('thumbnail done')
       } catch (err) {
         console.log('Thumbnail error', err)
+        outputEntry.published = false
       }
     }
 
