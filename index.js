@@ -160,73 +160,91 @@ for (const id in searchData) {
         }
       }
 
-      const { actualWidth, actualHeight } = await new Promise((resolve, reject) => {
-        const progressFrequency = 2000
-        let lastProgress = 0
-        let lastPercent = ''
-        const instance = hbjs.spawn(handbrakeOptions).on('error', err => {
-          // invalid user input, no video found etc
-          reject(err)
-        }).on('progress', progress => {
-          if (Date.now() > lastProgress + progressFrequency && lastPercent !== progress.percentComplete) {
-            console.log(`Encode progress: ${progress.percentComplete || 0}%, ETA: ${progress.eta}`)
-            lastPercent = progress.percentComplete
-            lastProgress = Date.now()
-          }
-        }).on('complete', () => {
-          const [_, x, y] = instance.output.match(/ \+ display dimensions: ([0-9]+) x ([0-9]+)/)
-          resolve({ actualWidth: parseInt(x), actualHeight: parseInt(y) })
+      let actualWidth, actualHeight
+      try {
+         const result = await new Promise((resolve, reject) => {
+          const progressFrequency = 2000
+          let lastProgress = 0
+          let lastPercent = ''
+          const instance = hbjs.spawn(handbrakeOptions).on('error', err => {
+            // invalid user input, no video found etc
+            reject(err)
+          }).on('progress', progress => {
+            if (Date.now() > lastProgress + progressFrequency && lastPercent !== progress.percentComplete) {
+              console.log(`Encode progress: ${progress.percentComplete || 0}%, ETA: ${progress.eta}`)
+              lastPercent = progress.percentComplete
+              lastProgress = Date.now()
+            }
+          }).on('complete', () => {
+            const [_, x, y] = instance.output.match(/ \+ display dimensions: ([0-9]+) x ([0-9]+)/)
+            resolve({ actualWidth: parseInt(x), actualHeight: parseInt(y) })
+          })
         })
-      })
 
-      didEncodeWork = true
+        actualWidth = result.actualWidth
+        actualHeight = result.actualHeight
 
-      const mediaOutputURL = new URL(outputURL.toString())
-      const videoEncodeFilename = `${idToFilename(id)}-${mediaIdx}-${codec}-${actualWidth}x${actualHeight}.${container}`
-      mediaOutputURL.pathname = `${mediaOutputURL.pathname.replace(/\.json$/, '')}-media/${videoEncodeFilename}`
+        didEncodeWork = true
+      } catch (err) {
+        console.log('Video encode failed:', err)
+        didEncodeWork = false
+      }
 
-      const [pWidth, pHeight, pCodecName] = await ffprobe(outputTempFile, 'stream', 'v', 'width,height,codec_name')
-      const [pDuration, pByteSize] = await ffprobe(outputTempFile, 'format', 'v', 'duration,size')
+      if (didEncodeWork) {
+        const mediaOutputURL = new URL(outputURL.toString())
+        const videoEncodeFilename = `${idToFilename(id)}-${mediaIdx}-${codec}-${actualWidth}x${actualHeight}.${container}`
+        mediaOutputURL.pathname = `${mediaOutputURL.pathname.replace(/\.json$/, '')}-media/${videoEncodeFilename}`
 
-      const encodedData = await read(pathToFileURL(outputTempFile))
-      await write(mediaOutputURL, encodedData)
-      await fs.promises.rm(outputTempFile)
+        const [pWidth, pHeight, pCodecName] = await ffprobe(outputTempFile, 'stream', 'v', 'width,height,codec_name')
+        const [pDuration, pByteSize] = await ffprobe(outputTempFile, 'format', 'v', 'duration,size')
 
-      outputMedia.encodes.push({
-        type: `video/${container}`,
-        container,
-        width: Number(pWidth),
-        height: Number(pHeight),
-        codec: pCodecName,
-        duration: Number(pDuration),
-        byteSize: Number(pByteSize),
-        url: `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${videoEncodeFilename}`,
-        version: encodeVersion,
-      })
+        const encodedData = await read(pathToFileURL(outputTempFile))
+        await write(mediaOutputURL, encodedData)
+        await fs.promises.rm(outputTempFile)
 
-      console.log('encode complete')
+        outputMedia.encodes.push({
+          type: `video/${container}`,
+          container,
+          width: Number(pWidth),
+          height: Number(pHeight),
+          codec: pCodecName,
+          duration: Number(pDuration),
+          byteSize: Number(pByteSize),
+          url: `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${videoEncodeFilename}`,
+          version: encodeVersion,
+        })
+
+        console.log('encode complete')
+      }
+    }
+
+    if (!didEncodeWork) {
+      outputEntry.published = false
     }
 
     outputEntry.media.push(outputMedia)
     console.log('entry complete')
 
     if (!outputMedia.thumbnail) {
-      console.log(`generating thumbnail for ${mediaURL}`)
-      const thumbnailTempPath = join(tmpdir(), `thumbnail-${nanoid()}.webp`)
-      const inputVideoPath = inputFileCache.get(mediaURL.toString()) || mediaURL.toString()
-      await genThumbnail(inputVideoPath, thumbnailTempPath, '?x576', {
-        path: ffmpeg.path,
-        seek: clipping && typeof clipping.start === 'number' ? `${clipping.start}` : '00:00:00'
-      })
-      const thumbnailData = await read(pathToFileURL(thumbnailTempPath))
-      const thumbnailFilename = `${idToFilename(id)}-${mediaIdx}.webp`
-      const thumbnailURL = new URL(outputURL.toString())
-      thumbnailURL.pathname = `${thumbnailURL.pathname.replace(/\.json$/, '')}-media/${thumbnailFilename}`
-      await write(thumbnailURL, thumbnailData)
-      await fs.promises.rm(thumbnailTempPath)
-      outputMedia.thumbnail = `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${thumbnailFilename}`
-      console.log('thumbnail done')
-      didEncodeWork = true
+      try {
+        console.log(`generating thumbnail for ${mediaURL}`)
+        const thumbnailTempPath = join(tmpdir(), `thumbnail-${nanoid()}.webp`)
+        const inputVideoPath = inputFileCache.get(mediaURL.toString()) || mediaURL.toString()
+        await genThumbnail(inputVideoPath, thumbnailTempPath, '?x576', {
+          path: ffmpeg.path,
+          seek: clipping && typeof clipping.start === 'number' ? `${clipping.start}` : '00:00:00'
+        })
+        const thumbnailData = await read(pathToFileURL(thumbnailTempPath))
+        const thumbnailFilename = `${idToFilename(id)}-${mediaIdx}.webp`
+        const thumbnailURL = new URL(outputURL.toString())
+        thumbnailURL.pathname = `${thumbnailURL.pathname.replace(/\.json$/, '')}-media/${thumbnailFilename}`
+        await write(thumbnailURL, thumbnailData)
+        await fs.promises.rm(thumbnailTempPath)
+        outputMedia.thumbnail = `${outputURL.pathname.split('/').slice(-1)[0].replace(/\.json$/, '')}-media/${thumbnailFilename}`
+        console.log('thumbnail done')
+      } catch (err) {
+        console.log('Thumbnail error', err)
+      }
     }
 
     if (args.writeContinuously && didEncodeWork) {
