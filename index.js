@@ -71,9 +71,6 @@ try {
 }
 const outputData = {}
 
-// list of temp files to free when we're done
-const inputFileCache = new Map() // maps input url to local file path
-
 const encodeFormats = args.formats.split(',').map(x => {
   const [format, res] = x.split('@')
   const [container, codec, quality] = format.split(':')
@@ -85,6 +82,9 @@ for (const id in searchData) {
   const entry = searchData[id]
   let didEncodeWork = false
   console.log(`working on ${id}: ${entry.title}`)
+
+  // list of temp files to free when we're done
+  const inputFileCache = new Map() // maps input url to local file path
 
   const outputEntry = outputData[id] = { ...entry, media: [] }
 
@@ -249,15 +249,14 @@ for (const id in searchData) {
       await write(outputURL, JSON.stringify({ ...prevEncode, ...outputData }))
     }
   }
+
+  // clean up temp files
+  for (const path of inputFileCache.values()) {
+    await fs.promises.rm(path)
+  }
 }
 
 console.log(`writing encoded search data to ${outputURL}`)
 await write(outputURL, JSON.stringify(outputData))
-
-// clean up temp files
-console.log('cleaning up cached videos')
-for (const path of inputFileCache.values()) {
-  await fs.promises.rm(path)
-}
 
 console.log('done')
