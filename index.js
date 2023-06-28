@@ -176,8 +176,13 @@ for (const id in searchData) {
               lastProgress = Date.now()
             }
           }).on('complete', () => {
-            const [_, x, y] = instance.output.match(/ \+ display dimensions: ([0-9]+) x ([0-9]+)/)
-            resolve({ actualWidth: parseInt(x), actualHeight: parseInt(y) })
+            const match = instance.output.match(/ \+ display dimensions: ([0-9]+) x ([0-9]+)/)
+            if (match) {
+              const [_, x, y] = match
+              resolve({ actualWidth: parseInt(x), actualHeight: parseInt(y) })
+            } else {
+              reject(instance.output)
+            }
           })
         })
 
