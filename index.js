@@ -79,7 +79,8 @@ const outputData = {}
 // strip out any encodes that are expired
 const maxEncodeAge = args.expireEncodes ? Date.now() - parseDuration(args.expireEncodes) : undefined
 if (maxEncodeAge !== undefined) {
-  for (const encode of prevEncode) {
+  for (const id in prevEncode) {
+    const encode = prevEncode[id]
     if (encode.timestamp < maxEncodeAge) {
       encode.thumbnail = undefined
       encode.timestamp = Date.now()
