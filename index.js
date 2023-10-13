@@ -68,7 +68,6 @@ const args = yargs(hideBin(process.argv))
 const inputURL = new URL(args.input, pathToFileURL(join(cwd(), 'placeholder-file')))
 const outputURL = new URL(args.output, pathToFileURL(join(cwd(), 'placeholder-file')))
 const searchData = JSON.parse(Buffer.from(await read(inputURL)).toString('utf-8'))
-const maxEncodeAge = args.expireEncodes ? Date.now() - parseDuration(args.expireEncodes) : undefined
 let prevEncode = {}
 try {
   prevEncode = JSON.parse(Buffer.from(await read(outputURL) || '{}').toString('utf-8'))
@@ -76,6 +75,18 @@ try {
   console.warn(err)
 }
 const outputData = {}
+
+// strip out any encodes that are expired
+const maxEncodeAge = args.expireEncodes ? Date.now() - parseDuration(args.expireEncodes) : undefined
+if (maxEncodeAge !== undefined) {
+  for (const encode of prevEncode) {
+    if (encode.timestamp < maxEncodeAge) {
+      encode.thumbnail = undefined
+      encode.timestamp = Date.now()
+      encode.encodes = []
+    }
+  }
+}
 
 const encodeFormats = args.formats.split(',').map(x => {
   const [format, res] = x.split('@')
@@ -115,9 +126,6 @@ for (const id in searchData) {
       if (prevMedia) {
         if (!outputMedia.thumbnail) outputMedia.thumbnail = prevMedia.thumbnail
         const prevEncode = prevMedia.encodes.find(x => {
-          if (maxEncodeAge !== undefined && maxEncodeAge > outputMedia.timestamp) {
-            return false
-          }
           return x.version === encodeVersion
         })
         if (prevEncode) {
