@@ -11,6 +11,7 @@ import { tmpdir } from 'os'
 import ffmpeg from 'ffmpeg-static'
 import genThumbnail from 'simple-thumbnail'
 import ffprobe from 'getmeta-ffprobe'
+import parseDuration from 'parse-duration'
 
 const codecPresets = {
   vp9: 'slow', // very slow is so so slow in vp9
@@ -58,11 +59,16 @@ const args = yargs(hideBin(process.argv))
     type: 'boolean',
     description: 'Write the output json after every entry is encoded'
   })
+  .option('expire-encodes', {
+    type: 'string',
+    description: 'Redo the encodes, takes a time like "1w" or "1h" to specify how old is too old',
+  })
   .parse()
 
 const inputURL = new URL(args.input, pathToFileURL(join(cwd(), 'placeholder-file')))
 const outputURL = new URL(args.output, pathToFileURL(join(cwd(), 'placeholder-file')))
 const searchData = JSON.parse(Buffer.from(await read(inputURL)).toString('utf-8'))
+const maxEncodeAge = args.expireEncodes ? Date.now() - parseDuration(args.expireEncodes) : undefined
 let prevEncode = {}
 try {
   prevEncode = JSON.parse(Buffer.from(await read(outputURL) || '{}').toString('utf-8'))
@@ -109,6 +115,9 @@ for (const id in searchData) {
       if (prevMedia) {
         if (!outputMedia.thumbnail) outputMedia.thumbnail = prevMedia.thumbnail
         const prevEncode = prevMedia.encodes.find(x => {
+          if (maxEncodeAge !== undefined && maxEncodeAge > outputMedia.timestamp) {
+            return false
+          }
           return x.version === encodeVersion
         })
         if (prevEncode) {

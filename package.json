@@ -20,6 +20,7 @@
     "handbrake-js": "^6.0.0",
     "nanoid": "^3.3.4",
     "node-fetch": "^3.2.4",
+    "parse-duration": "^1.1.0",
     "simple-thumbnail": "^1.6.5",
     "yargs": "^17.5.1"
   },
