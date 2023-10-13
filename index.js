@@ -144,6 +144,7 @@ for (const id in searchData) {
         quality: quality,
         hqdn3d: 'strong',
         'keep-display-aspect': true,
+        'non-anamorphic': true,
         audio: 'none',
         'encoder-preset': codecPresets[codec] || 'veryslow',
         optimize: true,
